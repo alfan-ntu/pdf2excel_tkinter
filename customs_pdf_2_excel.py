@@ -211,14 +211,17 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
 
     # cleaning up those file objects
     if ifObj.closed is False:
-        # print("Closing input file...")
         ifObj.close()
 
     if ofObj.closed is False:
         ofObj.close()
+    if os.path.isfile(output_file):
+        os.remove(output_file)
 
     if tfObj.closed is False:
         tfObj.close()
+    if os.path.isfile(textoutput_file):
+        os.remove(textoutput_file)
 
     if __debug__ is False:
         dbgFileObj.close()

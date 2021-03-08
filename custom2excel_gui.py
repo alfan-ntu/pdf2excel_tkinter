@@ -8,9 +8,6 @@
 
 from tkinter import *
 from tkinter import ttk
-import tkinter.filedialog as fdlg
-from tkinter import messagebox
-import utilities
 
 from gui_construct import MsgPanel, OperationPanel, FileSelectionPanel
 

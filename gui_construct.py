@@ -19,6 +19,7 @@ import utilities
 import constant
 import customs_pdf_2_excel
 import subprocess
+import os
 import pdb
 
 
@@ -140,23 +141,28 @@ class OperationPanel(ttk.Frame):
 
 
 def show_about_info():
-    messagebox.showinfo(title="海關稅單彙總清單轉檔工具", message="1. 選取PDF格式海關稅單彙總清單\n2. 點選轉檔按鍵")
+    messagebox.showinfo(title="海關稅單彙總清單轉檔工具",
+                        message="1. 選取PDF格式海關稅單彙總清單\n2. 點選轉換按鍵進行轉檔\n3. 點選檢視按鍵進行檢視")
 
 
 def convert_customs_pdf(fp):
-    # print("Converting Customs PDF file", fp.fn)
-    # print("Input PDF file is", utilities.extract_file(fp.fn))
-    # print("Output Excel file name is", fp.ent_output.get())
     working_dir = utilities.extract_directory(fp.fn)
     input_fn = utilities.extract_file(fp.fn)
     output_fn = fp.ent_output.get()
     customs_pdf_2_excel.pdf_2_excel(working_dir, input_fn, output_fn)
+    msg = "PDF轉檔完成-"+output_fn+"\n使用檢視功能檢視轉出Excel"
+    messagebox.showinfo(title="海關稅單彙總清單轉檔工具", message=msg)
 
 
 def view_output(fp):
     working_dir = utilities.extract_directory(fp.fn)
     output_fn = fp.ent_output.get()
     target_excel = working_dir + "/" + output_fn
-    subprocess.call(['C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE', target_excel])
+    if os.path.exists('C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE'):
+        subprocess.call(['C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE', target_excel])
+    elif os.path.exists('C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\EXCEL.EXE'):
+        subprocess.call(['C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\EXCEL.EXE', target_excel])
+    else:
+        messagebox.showinfo(title="海關稅單彙總清單轉檔工具", message="無法找到Excel的安裝")
 
 
