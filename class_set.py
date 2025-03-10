@@ -14,10 +14,10 @@ to operate
 :author: Maoyi Fan
 :email: maoyi.fan@yapro.com.tw
 :date: 2025-03-09
-:version: 1.0
+:version: 1.1
 :license: MIT
 :history:
-    - 1.0 (2025-03-09) - Added a state variable tax_bill_info_OK to handle the exceptional
+    - 1.1 (2025-03-09) - Added a state variable tax_bill_info_OK to handle the exceptional
                          case where only one record is on the last page
 """
 import math

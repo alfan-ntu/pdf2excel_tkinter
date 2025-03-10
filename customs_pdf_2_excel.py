@@ -12,10 +12,10 @@ a table and store it into an Excel file.
 :author: Maoyi Fan
 :email: maoyi.fan@yapro.com.tw
 :date: 2025-03-09
-:version: 1.0
+:version: 1.1
 :license: MIT
 :history:
-    - 1.0 (2025-03-09) - To handle exceptional case where only one record on the
+    - 1.1 (2025-03-09) - To handle exceptional case where only one record on the
                          last page
 """
 
