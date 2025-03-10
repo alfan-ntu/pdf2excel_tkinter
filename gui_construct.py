@@ -141,8 +141,10 @@ class OperationPanel(ttk.Frame):
 
 
 def show_about_info():
+    msg = "1. 選取PDF格式海關稅單彙總清單\n2. 點選轉換按鍵進行轉檔\n3. 點選檢視按鍵進行檢視"
+    msg = msg + "\n" + "版本編號:" + constant.VERSION_CODE
     messagebox.showinfo(title="海關稅單彙總清單轉檔工具",
-                        message="1. 選取PDF格式海關稅單彙總清單\n2. 點選轉換按鍵進行轉檔\n3. 點選檢視按鍵進行檢視")
+                        message=msg)
 
 
 def convert_customs_pdf(fp):

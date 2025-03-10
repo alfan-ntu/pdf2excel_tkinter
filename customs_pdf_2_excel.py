@@ -1,3 +1,24 @@
+"""
+customs_pdf_2_excel.py
+============
+
+This module provides core function to extract contents from a .pdf file, form
+a table and store it into an Excel file.
+
+.. note::
+    This documentation follows the reStructuredText (reST) format, which is
+    compatible with Sphinx autodoc.
+
+:author: Maoyi Fan
+:email: maoyi.fan@yapro.com.tw
+:date: 2025-03-09
+:version: 1.0
+:license: MIT
+:history:
+    - 1.0 (2025-03-09) - To handle exceptional case where only one record on the
+                         last page
+"""
+
 import os
 import pdfminer
 import pdfminer.high_level
@@ -18,6 +39,7 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
     tax_amount_list = []                # 金額
     first_page = True                   # end of Tax_ID of the 1st page differs from the rest page
     tax_bill_or_not = True
+    tax_bill_info_OK = False            # 稅單號碼, 報單號碼 extracted
     tax_bill_entry = False              # 稅單資料輸入
     decl_form_entry = False             # 報單資料輸入
     tax_ID_entry = False                # 統一編號輸入
@@ -26,7 +48,8 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
     if input_fn == "":
         return False
 
-    es = class_set.entry_setting(tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry)
+    es = class_set.entry_setting(tax_bill_entry, decl_form_entry, tax_ID_entry, \
+                                 tax_amount_entry, tax_bill_info_OK)
     # ifObj : file object of the input pdf file
     file_to_open = working_dir + "/" + input_fn
     print("Source file to open : ", file_to_open)
@@ -66,7 +89,8 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
             paramv = locals().get(param, None)
             if paramv is not None:
                 setattr(laparams, param, paramv)
-
+    #
+    # extract text from the input .pdf file
     pdfminer.high_level.extract_text_to_fp(ifObj, tfObj, **locals())
     tfObj.close()
 
@@ -77,7 +101,7 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
     print_flag = False
     # reading input file line-by-line
     tfStr = tfObj.readline()
-
+    l = 1
     while tfStr:
         # for x in tfStr:
         #    print(x.encode("utf-8").decode("utf-8", "ignore"))
@@ -85,6 +109,7 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
         # determining the state of entries
         #
         #        if tfStr.strip("\n") == constant.FILE_HEADER:
+
         if tfStr.strip('\n') == constant.FILE_HEADER:
             # 彙總稅單稅單清單
             if __debug__ is False:
@@ -93,24 +118,59 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
         # 總筆數"
         #            print("File Tailer: ", tfStr.strip('\n'))
         elif tfStr.strip('\n') == constant.BEGINNING_DECLARATION_ID:
+            # 報單號碼;
+            # Description: pdfminer reads text in the order of storage, not display
+            #              the results of text parsing group 稅單號碼 and 報單號碼 under
+            #              報單號碼
+            #
+            # === Normal Case ===
+            # Parse results:
             # 報單號碼
+            #
+            # ABI31130803796  <---- 稅單號碼
+            #
+            # ABF213H16A9766  <---- 報單號碼
+            #
+            # ABI31130790050  <---- 稅單號碼
+            #
+            # ABF213H16A4990  <---- 報單號碼
+            # ....
+            # 納稅義務人統編
+            #
+            # 29060646        <---- 納稅義務人統編
+            #
+            # === Exceptional Case ===
+            # Description: If the last page contains only one record, 稅單號碼,報單號碼 is grouped into
+            #              納稅義務人統編
+            # Parse results:
+            # 報單號碼
+            #
+            # 納稅義務人統編
+            #
+            # ABI31146190113  <---- 稅單號碼
+            #
+            # ABF214H16A5556  <---- 報單號碼
+            #
+            # 29060646        <---- 納稅義務人統編
+            #
+            #
             print_flag = True
             tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry = \
                 es.clear_current_setting()
             tax_bill_entry = True
-            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry)
+            tax_bill_info_OK = False
+            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, \
+                                 tax_amount_entry, tax_bill_info_OK)
             if __debug__ is False:
                 print("Beginning declaration ID: ", tfStr.strip('\n'))
-        #        elif tfStr.strip('\n') == constant.PAGE_TAILER:
-        # 製表日期
-        #            print("Page Tailer: ", tfStr.strip('\n'))
         elif tfStr.strip('\n') == constant.BEGINNING_TAX_ID_COLUMN:  # also END_DECLARATION_ID
             # 納稅義務人統編
             print_flag = True
             tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry = \
                 es.clear_current_setting()
             tax_ID_entry = True
-            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry)
+            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, \
+                                 tax_amount_entry, tax_bill_info_OK)
             if __debug__ is False:
                 print("Tax ID: ", tfStr.strip('\n'))
         elif tfStr.strip('\n') == constant.BEGINNING_AMOUNT_COLUMN:
@@ -119,7 +179,8 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
             tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry = \
                 es.clear_current_setting()
             tax_amount_entry = True
-            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry)
+            es.set_current_entry(tax_bill_entry, decl_form_entry, tax_ID_entry, \
+                                 tax_amount_entry, tax_bill_info_OK)
             if __debug__ is False:
                 print("Amount: ", tfStr.strip('\n'))
         elif tfStr.strip('\n') == constant.END_AMOUNT_COLUMN_P1:
@@ -143,44 +204,59 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
         #
         # processing per state machine
         #
-        valid_entry, tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry = \
+        valid_entry, tax_bill_entry, decl_form_entry, tax_ID_entry, tax_amount_entry, tax_bill_info_OK = \
             es.get_current_setting()
         # if print_flag is True:
         #    print_flag = False
         #    print(es.get_current_setting())
-
+        #
         # state machine processing column entries
         if tax_bill_entry is True:
-            if print_flag is True:
+            if print_flag is True: # print_flag is True means this line is the column tag itself, i.e. 報單號碼, 納稅義務人統編....
+                                   # rather than the data contents
                 print_flag = False
-                #  print("處理稅單、報單資料")
+                #  print("Column tag: 處理稅單、報單資料")
                 if __debug__ is False:
                     dbgFileObj.write(tfStr)
             else:
                 if tfStr.strip('\n') != "":
-                    if tax_bill_or_not is True:
+                    if tax_bill_or_not is True: # 稅單號碼
                         tax_bill_list.append(tfStr.strip('\n'))
                         tax_bill_or_not = False
-                    else:
+                    else:                       # 報單號碼
                         declaration_form_list.append(tfStr.strip('\n'))
                         tax_bill_or_not = True
+                        es.tax_bill_info_OK = True  # completed at least one record
                     if __debug__ is False:
                         dbgFileObj.write(tfStr)
         elif tax_ID_entry is True:
             if print_flag is True:
                 print_flag = False
-                #  print("處理統一編號")
+                #  print("Column tag 處理統一編號")
                 if __debug__ is False:
                     dbgFileObj.write(tfStr)
             else:
                 if tfStr.strip('\n') != "":
-                    tax_ID_list.append(tfStr.strip('\n'))
+                    # Handling Exceptional Case Here!!
+                    if tax_bill_info_OK is not True:
+                        print(f"Hit exceptional case@{tfStr.strip('\n')}", end="")
+                        if tax_bill_or_not is True:
+                            print(f"---> 稅單號碼")
+                            tax_bill_list.append(tfStr.strip('\n'))
+                            tax_bill_or_not = False
+                        else:
+                            print(f"---> 報單號碼")
+                            declaration_form_list.append(tfStr.strip('\n'))
+                            tax_bill_or_not = True
+                            es.tax_bill_info_OK = True
+                    else:   # Normal Cases
+                        tax_ID_list.append(tfStr.strip('\n'))
                     if __debug__ is False:
                         dbgFileObj.write(tfStr)
         elif tax_amount_entry is True:
             if print_flag is True:
                 print_flag = False
-                #  print("金額")
+                #  print("Column tag 金額")
                 if __debug__ is False:
                     dbgFileObj.write(tfStr)
             else:
@@ -190,6 +266,7 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
                         dbgFileObj.write(tfStr)
 
         tfStr = tfObj.readline()
+        l = l+1
 
     if __debug__ is False:
         dbgFileObj.write("tax_bill_list length:" + str(len(tax_bill_list)) + "\n")
@@ -208,20 +285,25 @@ def pdf_2_excel(working_dir, input_fn, output_fn):
                             "\t" + tax_ID_list[i] + "\t" + tax_amount_list[i] + "\n"
             ofObj.write(combined_string)
         excel_output.generate_excel_output(stripped_path_name, tax_bill_list, declaration_form_list, tax_ID_list, tax_amount_list)
-
-    # cleaning up those file objects
+    #
+    # Close file handlers and remove
+    #
     if ifObj.closed is False:
         ifObj.close()
 
     if ofObj.closed is False:
         ofObj.close()
-    if os.path.isfile(output_file):
-        os.remove(output_file)
+
+    if __debug__ is True:
+        if os.path.isfile(output_file):
+            os.remove(output_file)
 
     if tfObj.closed is False:
         tfObj.close()
-    if os.path.isfile(textoutput_file):
-        os.remove(textoutput_file)
+
+    if __debug__ is True:
+        if os.path.isfile(textoutput_file):
+            os.remove(textoutput_file)
 
     if __debug__ is False:
         dbgFileObj.close()
